@@ -1,19 +1,15 @@
 // ---------------------------------------------------------------------------
-// Example NewPing library sketch that does a ping about 20 times per second.
+// $ Sensor sketch that pins every 50ms between each sensor and signals buzzer according to the lowest distance pinged.
 // ---------------------------------------------------------------------------
-
-// include the library code
 #include <Wire.h>
-//#include <LiquidCrystal_I2C.h>
 #include <NewPing.h>
-
-//LiquidCrystal_I2C lcd(0x27,16,2);
 
 int buzzerPin = 7;//the pin of the active buzzer attach to pin7
 int distance = 0;
-int triggerDistanceClose = 5;
-int triggerDistanceMed = 15;
-int triggerDistanceFar = 30;
+int distances[4];
+int triggerDistanceClose = 10;
+int triggerDistanceMed = 25;
+int triggerDistanceFar = 40;
 int onTime = 100;
 int quietTimeClose = 0;
 int quietTimeMed = 100;
@@ -21,9 +17,14 @@ int quietTimeFar = 200;
 
 #define TRIGGER_PIN  2  // Arduino pin tied to trigger pin on the ultrasonic sensor.
 #define ECHO_PIN     3  // Arduino pin tied to echo pin on the ultrasonic sensor.
-#define MAX_DISTANCE 400 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
+#define SONAR_NUM 4 // Numer of Sensors
+#define MAX_DISTANCE 250 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
 
-NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE); // NewPing setup of pins and maximum distance.
+NewPing sonar[SONAR_NUM] = {
+  NewPing(4, 5, MAX_DISTANCE), // each sesnors trigger pin, echo pin, and max distance.
+  NewPing(6, 7, MAX_DISTANCE),
+  NewPing(8, 9, MAX_DISTANCE),
+}
 
 void setup() {
   Serial.begin(115200); // Open serial monitor at 115200 baud to see ping results.
@@ -34,34 +35,36 @@ void setup() {
 }
 
 void loop() {
-  delay(100); // Wait 50ms between pings (about 20 pings/sec). 29ms should be the shortest delay between pings.
-  unsigned int uS = sonar.ping(); // Send ping, get ping time in microseconds (uS).
-  distance = uS / US_ROUNDTRIP_CM;
-  Serial.print("Ping: ");
-  Serial.print(distance); // Convert ping time to distance in cm and print result (0 = outside set distance range)
-  Serial.println("cm");
-  if (distance <= triggerDistanceClose) {
+  for (uint8_t i = 0; i < SONAR_NUM; i++) {
+    delay(50); // 29ms should be the shortest delay between pings.
+    unsigned int distance = sonar[i].ping_cm();
+    distances[i] = distance;
+    Serial.print(i);
+    Serial.print('=');
+    Serial.print(distance);
+    Serial.print('cm ');
+  }
+  Serial.println();
+
+  // IF ANY of the distances are below the thresholds take lowest adn signal the buzzer accordingly.
+  for (uint8_t i = 0; i < SONAR_NUM; i++){
+    if(distances[i] < distances[0]) distances[0] = distances[i];
+  }
+
+  if (distances[0] <= triggerDistanceClose) {
     digitalWrite(buzzerPin, LOW);
-//    delay(onTime);
-//    digitalWrite(buzzerPin, HIGH);
-//    delay(quietTimeClose);
-  } else if (distance <= triggerDistanceMed) {
+    Serial.println('Close');
+  } else if (distances[0] <= triggerDistanceMed) {
     digitalWrite(buzzerPin, LOW);
     delay(onTime);
     digitalWrite(buzzerPin, HIGH);
     delay(quietTimeMed);
-  } else if (distance <= triggerDistanceFar) {
+    Serial.println('Med');
+  } else if (distances[0] <= triggerDistanceFar) {
     digitalWrite(buzzerPin, LOW);
     delay(onTime);
     digitalWrite(buzzerPin, HIGH);
     delay(quietTimeFar);
+    Serial.println('Far');
   } 
-//  lcd.setCursor(0, 0);
-//  lcd.print("Distance:");
-//  lcd.setCursor(0, 1);
-//  lcd.print("             ");
-//  lcd.setCursor(9, 1);
-//  lcd.print(uS / US_ROUNDTRIP_CM);
-//  lcd.setCursor(12, 1);
-//  lcd.print("cm");
 }
