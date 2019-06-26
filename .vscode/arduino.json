@@ -1,5 +1,7 @@
 {
     "board": "arduino:avr:pro",
     "configuration": "cpu=16MHzatmega328",
-    "programmer": "AVR ISP"
+    "programmer": "AVR ISP",
+    "port": "/dev/ttyUSB0",
+    "sketch": "Ultrasonic_NO_LCD/Ultrasonic_NO_LCD.ino"
 }
